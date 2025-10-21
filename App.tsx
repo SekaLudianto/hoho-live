@@ -8,15 +8,12 @@ import GiftBox from './components/GiftBox';
 import Leaderboard from './components/Leaderboard';
 import RankOverlay from './components/RankOverlay';
 import SultanOverlay from './components/SultanOverlay';
-import { User, LeaderboardEntry, ChatMessage, GiftMessage } from './types';
+import { User, LeaderboardEntry, ChatMessage, GiftMessage, SocialMessage } from './types';
 import { GameIcon, LeaderboardIcon, ChatIcon, GiftIcon, StatsIcon } from './components/icons/TabIcons';
 import { SpinnerIcon } from './components/icons/SpinnerIcon';
 import MusicPlayer from './components/MusicPlayer';
-import ViewModeSwitcher from './components/ViewModeSwitcher';
 
-const TARGET_USERNAME = 'achmadsyams';
-
-type ViewMode = 'mobile' | 'tablet' | 'desktop';
+const TARGET_USERNAME = 'ahmadsyams.jpg';
 
 const App: React.FC = () => {
     const { 
@@ -37,11 +34,40 @@ const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState('game');
     const [isRankOverlayVisible, setIsRankOverlayVisible] = useState(false);
     const [sultanInfo, setSultanInfo] = useState<{ user: User; gift: GiftMessage } | null>(null);
-    const [viewMode, setViewMode] = useState<ViewMode>('desktop');
-    
+    const [validationToast, setValidationToast] = useState<{ show: boolean, content: string, type: 'info' | 'error' }>({ show: false, content: '', type: 'info' });
+
+    const participantsRef = useRef(new Set<string>());
     const rankOverlayTimeoutRef = useRef<number | null>(null);
     const sultanTimeoutRef = useRef<number | null>(null);
+    const validationTimeoutRef = useRef<number | null>(null);
     const lastProcessedRankCommandRef = useRef<ChatMessage | null>(null);
+    const lastProcessedGiftRef = useRef<GiftMessage | null>(null);
+    const lastProcessedSocialRef = useRef<SocialMessage | null>(null);
+
+    const showValidationToast = useCallback((content: string, type: 'info' | 'error' = 'error') => {
+        if(validationTimeoutRef.current) {
+            clearTimeout(validationTimeoutRef.current);
+        }
+        setValidationToast({ show: true, content, type });
+        validationTimeoutRef.current = window.setTimeout(() => {
+            setValidationToast({ show: false, content: '', type: 'info' });
+        }, 3000);
+    }, []);
+
+    const addParticipant = useCallback((user: User, reason: 'follow' | 'gift' | 'comment') => {
+        if (!participantsRef.current.has(user.uniqueId)) {
+            participantsRef.current.add(user.uniqueId);
+            let toastContent = '';
+            if (reason === 'follow') {
+                toastContent = `<b>${user.nickname}</b>, terima kasih sudah follow! Kamu sekarang bisa menebak.`;
+            } else if (reason === 'gift') {
+                toastContent = `<b>${user.nickname}</b>, makasih giftnya! Kamu sekarang bisa menebak.`;
+            } else if (reason === 'comment') {
+                toastContent = `<b>${user.nickname}</b>, yesss King MU! Kamu sekarang bisa ikut menebak.`;
+            }
+            showValidationToast(toastContent, 'info');
+        }
+    }, [showValidationToast]);
 
     useEffect(() => {
         if (!isConnected && !isConnecting) {
@@ -62,37 +88,40 @@ const App: React.FC = () => {
                 
                 rankOverlayTimeoutRef.current = window.setTimeout(() => {
                     setIsRankOverlayVisible(false);
-                }, 5000); // Tampilkan selama 5 detik
+                }, 5000);
             }
         }
     }, [latestChatMessage]);
     
-     useEffect(() => {
-        if (latestGiftMessage) {
-            // Hapus timeout sebelumnya jika ada gift baru masuk dengan cepat
+    useEffect(() => {
+        if (latestGiftMessage && latestGiftMessage !== lastProcessedGiftRef.current) {
+            addParticipant(latestGiftMessage, 'gift');
+            lastProcessedGiftRef.current = latestGiftMessage;
+
             if (sultanTimeoutRef.current) {
                 clearTimeout(sultanTimeoutRef.current);
             }
-
-            // Tampilkan sultan baru
             setSultanInfo({ user: latestGiftMessage, gift: latestGiftMessage });
-
-            // Atur timeout untuk menyembunyikan overlay setelah 7 detik
             sultanTimeoutRef.current = window.setTimeout(() => {
                 setSultanInfo(null);
             }, 7000);
         }
-    }, [latestGiftMessage]);
+    }, [latestGiftMessage, addParticipant]);
 
     useEffect(() => {
-        // Cleanup timeout on component unmount
+        if (latestSocialMessage && latestSocialMessage !== lastProcessedSocialRef.current) {
+            if (latestSocialMessage.displayType.includes('follow')) {
+                addParticipant(latestSocialMessage, 'follow');
+            }
+            lastProcessedSocialRef.current = latestSocialMessage;
+        }
+    }, [latestSocialMessage, addParticipant]);
+
+    useEffect(() => {
         return () => {
-            if (rankOverlayTimeoutRef.current) {
-                clearTimeout(rankOverlayTimeoutRef.current);
-            }
-            if (sultanTimeoutRef.current) {
-                clearTimeout(sultanTimeoutRef.current);
-            }
+            if (rankOverlayTimeoutRef.current) clearTimeout(rankOverlayTimeoutRef.current);
+            if (sultanTimeoutRef.current) clearTimeout(sultanTimeoutRef.current);
+            if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
         };
     }, []);
 
@@ -102,20 +131,17 @@ const App: React.FC = () => {
             let newLeaderboard;
 
             if (userIndex > -1) {
-                // Update skor & info pengguna yang ada
                 newLeaderboard = [...prev];
                 const updatedUser = { 
-                    user: winner, // Perbarui info pengguna dengan yang terbaru
+                    user: winner,
                     wins: newLeaderboard[userIndex].wins + 1 
                 };
                 newLeaderboard[userIndex] = updatedUser;
             } else {
-                // Tambahkan pemenang baru
                 const newWinner = { user: { ...winner }, wins: 1 };
                 newLeaderboard = [...prev, newWinner];
             }
 
-            // Urutkan berdasarkan kemenangan menurun, simpan semua pemain
             return newLeaderboard.sort((a, b) => b.wins - a.wins);
         });
     }, []);
@@ -127,12 +153,6 @@ const App: React.FC = () => {
         { name: 'chat', label: 'Obrolan', icon: <ChatIcon /> },
         { name: 'gift', label: 'Hadiah', icon: <GiftIcon /> },
     ];
-
-    const viewModeClasses: Record<ViewMode, string> = {
-        mobile: 'w-full max-w-sm h-[844px] max-h-[90vh] md:aspect-auto',
-        tablet: 'w-full max-w-2xl h-[1024px] max-h-[90vh] md:aspect-auto',
-        desktop: 'w-full h-full md:max-w-6xl md:h-auto md:max-h-[95vh] md:aspect-[18/16]'
-    };
     
     if (!isConnected) {
         return (
@@ -155,8 +175,7 @@ const App: React.FC = () => {
 
     return (
         <div className="w-full h-screen md:min-h-screen flex items-center justify-center p-2 md:p-4">
-            <ViewModeSwitcher currentMode={viewMode} setMode={setViewMode} />
-            <div className={`mx-auto bg-gray-800 md:rounded-2xl shadow-lg p-2 md:p-6 flex flex-col transition-all duration-300 ease-in-out ${viewModeClasses[viewMode]}`}>
+            <div className="mx-auto bg-gray-800 md:rounded-2xl shadow-lg p-2 md:p-6 flex flex-col w-full h-full md:max-w-6xl md:h-auto md:max-h-[95vh]">
                 
                 <RankOverlay isOpen={isRankOverlayVisible} leaderboard={leaderboard} />
                 <SultanOverlay 
@@ -165,7 +184,6 @@ const App: React.FC = () => {
                     gift={sultanInfo?.gift || null} 
                 />
                 
-                {/* Common Header Section */}
                 <div className="flex-shrink-0 space-y-4">
                     <Header />
                     <div className="hidden md:block">
@@ -180,14 +198,14 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Desktop Layout */}
                 <div className="hidden md:grid grid-cols-[2fr_3fr] gap-6 mt-6 flex-grow min-h-0">
                     <WordleGame 
                         latestChatMessage={latestChatMessage}
-                        latestGiftMessage={latestGiftMessage}
-                        latestSocialMessage={latestSocialMessage}
                         isConnected={isConnected} 
                         updateLeaderboard={updateLeaderboard}
+                        participants={participantsRef.current}
+                        addParticipant={addParticipant}
+                        showValidationToast={showValidationToast}
                     />
                     <div className="space-y-4 flex flex-col overflow-y-auto">
                        <Leaderboard leaderboard={leaderboard} />
@@ -196,17 +214,16 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Mobile Layout */}
                 <div className="md:hidden flex flex-col flex-grow min-h-0">
-                    {/* Tab Content */}
                     <main className="flex-grow min-h-0 overflow-y-auto">
                         <div className={activeTab === 'game' ? 'h-full' : 'hidden'}>
                             <WordleGame 
                                 latestChatMessage={latestChatMessage} 
-                                latestGiftMessage={latestGiftMessage}
-                                latestSocialMessage={latestSocialMessage}
                                 isConnected={isConnected} 
                                 updateLeaderboard={updateLeaderboard}
+                                participants={participantsRef.current}
+                                addParticipant={addParticipant}
+                                showValidationToast={showValidationToast}
                             />
                         </div>
                          <div className={activeTab === 'stats' ? '' : 'hidden'}>
@@ -232,7 +249,6 @@ const App: React.FC = () => {
                         </div>
                     </main>
                     
-                    {/* Tab Navigation */}
                     <nav className="flex-shrink-0 border-t border-gray-700 bg-gray-800 -mx-2 -mb-2 px-2 pt-2 pb-1">
                         <div className="flex justify-around" aria-label="Tabs">
                             {tabs.map((tab) => (
@@ -257,6 +273,9 @@ const App: React.FC = () => {
                 
                 <MusicPlayer />
 
+                <div id="validationToast" className={`fixed top-28 right-5 ${validationToast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'} text-white py-3 px-5 rounded-lg shadow-lg z-50 transition-all duration-300 ease-in-out ${validationToast.show ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'}`}>
+                    <p dangerouslySetInnerHTML={{ __html: validationToast.content }} />
+                </div>
             </div>
         </div>
     );

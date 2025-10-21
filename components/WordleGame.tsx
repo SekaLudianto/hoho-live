@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WordleGrid from './WordleGrid';
 import Modal from './Modal';
-import { ChatMessage, GuessData, TileStatus, User, GiftMessage, SocialMessage } from '../types';
+import { ChatMessage, GuessData, TileStatus, User } from '../types';
 import wordService from '../services/wordService';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 
 interface WordleGameProps {
     latestChatMessage: ChatMessage | null;
-    latestGiftMessage: GiftMessage | null;
-    latestSocialMessage: SocialMessage | null;
     isConnected: boolean;
     updateLeaderboard: (winner: User) => void;
+    participants: Set<string>;
+    addParticipant: (user: User, reason: 'follow' | 'gift' | 'comment') => void;
+    showValidationToast: (content: string, type: 'info' | 'error') => void;
 }
 
 const WORD_LENGTH = 5;
@@ -43,7 +44,7 @@ const calculateStatuses = (guess: string, solution: string): TileStatus[] => {
     return statuses;
 };
 
-const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMessage, latestSocialMessage, isConnected, updateLeaderboard }) => {
+const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected, updateLeaderboard, participants, addParticipant, showValidationToast }) => {
     const [targetWord, setTargetWord] = useState<string>('');
     
     const [guessHistory, setGuessHistory] = useState<GuessData[]>([]);
@@ -56,13 +57,11 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
     const [isPreparing, setIsPreparing] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalContent, setModalContent] = useState<{ title: string; word: string; definitions: string[]; examples: string[], winner?: User }>({ title: '', word: '', definitions: [], examples: [], winner: undefined });
-    const [validationToast, setValidationToast] = useState<{ show: boolean, content: string, type: 'info' | 'error' }>({ show: false, content: '', type: 'info' });
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
     const messageQueueRef = useRef<ChatMessage[]>([]);
     const isProcessingQueueRef = useRef(false);
     const processedGuesses = useRef(new Set<string>());
-    const validationTimeoutRef = useRef<number | null>(null);
     const timerIntervalRef = useRef<number | null>(null);
     const gridContainerRef = useRef<HTMLDivElement>(null);
     const lastProcessedMessageRef = useRef<ChatMessage | null>(null);
@@ -70,47 +69,6 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
     const modalTimeoutRef = useRef<number | null>(null);
     const restartTimeoutRef = useRef<number | null>(null);
     const prepareGameTimeoutRef = useRef<number | null>(null);
-
-    const participantsRef = useRef(new Set<string>());
-    const lastProcessedGiftRef = useRef<GiftMessage | null>(null);
-    const lastProcessedSocialRef = useRef<SocialMessage | null>(null);
-
-    const showValidationToast = (content: string, type: 'info' | 'error' = 'error') => {
-        if(validationTimeoutRef.current) {
-            clearTimeout(validationTimeoutRef.current);
-        }
-        setValidationToast({ show: true, content, type });
-        validationTimeoutRef.current = window.setTimeout(() => {
-            setValidationToast({ show: false, content: '', type: 'info' });
-        }, 3000);
-    };
-    
-    useEffect(() => {
-        if (latestSocialMessage && latestSocialMessage !== lastProcessedSocialRef.current) {
-            if (latestSocialMessage.displayType.includes('follow')) {
-                const followUser = latestSocialMessage;
-                if (!participantsRef.current.has(followUser.uniqueId)) {
-                    participantsRef.current.add(followUser.uniqueId);
-                    const toastContent = `<b>${followUser.nickname}</b>, terima kasih sudah follow! Kamu sekarang bisa menebak.`;
-                    showValidationToast(toastContent, 'info');
-                }
-            }
-            lastProcessedSocialRef.current = latestSocialMessage;
-        }
-    }, [latestSocialMessage]);
-
-    useEffect(() => {
-        if (latestGiftMessage && latestGiftMessage !== lastProcessedGiftRef.current) {
-            const giftUser = latestGiftMessage;
-            if (!participantsRef.current.has(giftUser.uniqueId)) {
-                participantsRef.current.add(giftUser.uniqueId);
-                const toastContent = `<b>${giftUser.nickname}</b>, makasih giftnya! Kamu sekarang bisa menebak.`;
-                showValidationToast(toastContent, 'info');
-            }
-            lastProcessedGiftRef.current = latestGiftMessage;
-        }
-    }, [latestGiftMessage]);
-
 
     const clearTimer = useCallback(() => {
         if (timerIntervalRef.current) {
@@ -135,9 +93,6 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
         setIsGameOver(false);
         setGameMessage('');
         processedGuesses.current.clear();
-        participantsRef.current.clear();
-        lastProcessedGiftRef.current = null;
-        lastProcessedSocialRef.current = null;
         messageQueueRef.current = [];
         setTimeLeft(null);
         setTargetWord(''); // Clear word during preparation
@@ -238,7 +193,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
     }, [timeLeft, isGameOver, targetWord, clearTimer, autoRestartGame]);
 
     const handleGuess = useCallback((message: ChatMessage) => {
-        if (!participantsRef.current.has(message.uniqueId)) {
+        if (!participants.has(message.uniqueId)) {
             const toastContent = `<b>${message.nickname}</b>, kirim gift, follow, atau komen 'KING MU JUARA EPL' dulu untuk ikut menebak!`;
             showValidationToast(toastContent, 'info');
             return;
@@ -295,7 +250,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
                 restartTimeoutRef.current = window.setTimeout(autoRestartGame, 5000);
             }, 1500);
         }
-    }, [isGameOver, isConnected, targetWord, clearTimer, updateLeaderboard, autoRestartGame, isPreparing]);
+    }, [isGameOver, isConnected, targetWord, clearTimer, updateLeaderboard, autoRestartGame, isPreparing, participants, showValidationToast]);
 
     useEffect(() => {
         if (latestChatMessage && latestChatMessage !== lastProcessedMessageRef.current) {
@@ -319,11 +274,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
 
                 // Check for participation phrase
                 if (comment === 'KING MU JUARA EPL') {
-                    if (!participantsRef.current.has(user.uniqueId)) {
-                        participantsRef.current.add(user.uniqueId);
-                        const toastContent = `<b>${user.nickname}</b>, yesss King MU! Kamu sekarang bisa ikut menebak.`;
-                        showValidationToast(toastContent, 'info');
-                    }
+                    addParticipant(user, 'comment');
                 } 
                 // Check for a valid guess
                 else if (comment.length === WORD_LENGTH && /^[A-Z]+$/.test(comment)) {
@@ -336,7 +287,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
         }, 100); // Process up to 10 messages per second
 
         return () => clearInterval(interval);
-    }, [handleGuess]);
+    }, [handleGuess, addParticipant]);
     
     const formatTime = (seconds: number | null) => {
         if (seconds === null) return null;
@@ -426,10 +377,6 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
                  )}
                  <p className="text-xs text-gray-400 mt-4">Game baru akan dimulai secara otomatis...</p>
             </Modal>
-            
-            <div id="validationToast" className={`fixed top-28 right-5 ${validationToast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'} text-white py-3 px-5 rounded-lg shadow-lg z-50 transition-all duration-300 ease-in-out ${validationToast.show ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'}`}>
-                <p dangerouslySetInnerHTML={{ __html: validationToast.content }} />
-            </div>
         </>
     );
 };
