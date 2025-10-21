@@ -29,7 +29,7 @@ const GiftBox: React.FC<GiftBoxProps> = ({ latestGift }) => {
             <h3 className="text-lg font-bold text-center text-white mb-3">Hadiah</h3>
             <div className="flex-grow overflow-y-auto pr-2 space-y-2" ref={containerRef}>
                 {gifts.map((gift, index) => (
-                    <div key={index} className="bg-gray-800/50 p-2 rounded-lg flex items-start text-sm">
+                    <div key={`${gift.giftId}-${index}`} className="bg-gray-800/50 p-2 rounded-lg flex items-start text-sm">
                         <img className="w-8 h-8 rounded-full mr-3" src={gift.profilePictureUrl} alt={gift.nickname} />
                         <div className="flex-1">
                             <b>{generateUsernameLink(gift)}</b> mengirim {gift.describe}

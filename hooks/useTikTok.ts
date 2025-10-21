@@ -21,6 +21,7 @@ export const useTikTok = () => {
   
   const lastUniqueIdRef = useRef<string>('');
   const reconnectIntervalRef = useRef<number | null>(null);
+  const lastGiftIdRef = useRef<string | null>(null);
 
   const clearReconnectInterval = useCallback(() => {
     if (reconnectIntervalRef.current) {
@@ -113,6 +114,10 @@ export const useTikTok = () => {
 
     socket.current.on('gift', (msg: any) => {
         if (msg && typeof msg === 'object' && typeof msg.giftId !== 'undefined') {
+            const uniqueGiftId = `${msg.userId}_${msg.giftId}_${new Date().getTime()}`; // Create a more unique ID for each event instance
+            if(lastGiftIdRef.current === uniqueGiftId) return;
+            lastGiftIdRef.current = uniqueGiftId;
+
             if (msg.giftType === 1 && !msg.repeatEnd) {
                 // Streak gift, wait for it to end
             } else {
@@ -121,7 +126,7 @@ export const useTikTok = () => {
                     setTotalDiamonds(prev => prev + diamonds);
                 }
             }
-            setLatestGiftMessage(msg as GiftMessage);
+            setLatestGiftMessage({...msg, uniqueGiftId } as GiftMessage);
         } else {
             console.warn('Received invalid gift message:', msg);
         }

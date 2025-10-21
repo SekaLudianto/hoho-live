@@ -8,8 +8,7 @@ interface ViewModeSwitcherProps {
   setMode: (mode: ViewMode) => void;
 }
 
-// FIX: Changed JSX.Element to React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
-const modes: { name: ViewMode; icon: React.ReactElement }[] = [
+const modes: { name: ViewMode; icon: React.ReactNode }[] = [
   { name: 'mobile', icon: <MobileIcon /> },
   { name: 'tablet', icon: <TabletIcon /> },
   { name: 'desktop', icon: <DesktopIcon /> },

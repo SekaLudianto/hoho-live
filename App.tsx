@@ -8,10 +8,11 @@ import GiftBox from './components/GiftBox';
 import Leaderboard from './components/Leaderboard';
 import RankOverlay from './components/RankOverlay';
 import SultanOverlay from './components/SultanOverlay';
+import InfoMarquee from './components/InfoMarquee';
+import FollowMeOverlay from './components/FollowMeOverlay';
 import { User, LeaderboardEntry, ChatMessage, GiftMessage, SocialMessage } from './types';
 import { GameIcon, LeaderboardIcon, ChatIcon, GiftIcon, StatsIcon } from './components/icons/TabIcons';
 import { SpinnerIcon } from './components/icons/SpinnerIcon';
-import MusicPlayer from './components/MusicPlayer';
 
 const TARGET_USERNAME = 'achmadsyams';
 
@@ -35,6 +36,7 @@ const App: React.FC = () => {
     const [isRankOverlayVisible, setIsRankOverlayVisible] = useState(false);
     const [sultanInfo, setSultanInfo] = useState<{ user: User; gift: GiftMessage } | null>(null);
     const [validationToast, setValidationToast] = useState<{ show: boolean, content: string, type: 'info' | 'error' }>({ show: false, content: '', type: 'info' });
+    const [followMeWinner, setFollowMeWinner] = useState<User | null>(null);
 
     const participantsRef = useRef(new Set<string>());
     const rankOverlayTimeoutRef = useRef<number | null>(null);
@@ -53,6 +55,15 @@ const App: React.FC = () => {
             setValidationToast({ show: false, content: '', type: 'info' });
         }, 3000);
     }, []);
+    
+    const handleInstantWin = useCallback((user: User) => {
+        setFollowMeWinner(user);
+    }, []);
+
+    const handleNewGameStart = useCallback(() => {
+        setFollowMeWinner(null);
+    }, []);
+
 
     const addParticipant = useCallback((user: User, reason: 'follow' | 'gift' | 'comment') => {
         if (!participantsRef.current.has(user.uniqueId)) {
@@ -63,7 +74,7 @@ const App: React.FC = () => {
             } else if (reason === 'gift') {
                 toastContent = `<b>${user.nickname}</b>, makasih giftnya! Kamu sekarang bisa menebak.`;
             } else if (reason === 'comment') {
-                toastContent = `<b>${user.nickname}</b>, yesss King MU! Kamu sekarang bisa ikut menebak.`;
+                toastContent = `Selamat <b>${user.nickname}</b> kamu resmi jadi fans MU, silahkan menebak!`;
             }
             showValidationToast(toastContent, 'info');
         }
@@ -94,7 +105,7 @@ const App: React.FC = () => {
     }, [latestChatMessage]);
     
     useEffect(() => {
-        if (latestGiftMessage && latestGiftMessage !== lastProcessedGiftRef.current) {
+        if (latestGiftMessage && latestGiftMessage.giftId !== lastProcessedGiftRef.current?.giftId) {
             addParticipant(latestGiftMessage, 'gift');
             lastProcessedGiftRef.current = latestGiftMessage;
 
@@ -183,6 +194,7 @@ const App: React.FC = () => {
                     user={sultanInfo?.user || null} 
                     gift={sultanInfo?.gift || null} 
                 />
+                 <FollowMeOverlay winner={followMeWinner} />
                 
                 <div className="flex-shrink-0 space-y-4">
                     <Header />
@@ -199,14 +211,20 @@ const App: React.FC = () => {
                 </div>
                 
                 <div className="hidden md:grid grid-cols-[2fr_3fr] gap-6 mt-6 flex-grow min-h-0">
-                    <WordleGame 
-                        latestChatMessage={latestChatMessage}
-                        isConnected={isConnected} 
-                        updateLeaderboard={updateLeaderboard}
-                        participants={participantsRef.current}
-                        addParticipant={addParticipant}
-                        showValidationToast={showValidationToast}
-                    />
+                    <div className="flex flex-col gap-2">
+                        <InfoMarquee />
+                        <WordleGame 
+                            latestChatMessage={latestChatMessage}
+                            latestGiftMessage={latestGiftMessage}
+                            isConnected={isConnected} 
+                            updateLeaderboard={updateLeaderboard}
+                            participants={participantsRef.current}
+                            addParticipant={addParticipant}
+                            showValidationToast={showValidationToast}
+                            onInstantWin={handleInstantWin}
+                            onNewGameStart={handleNewGameStart}
+                        />
+                    </div>
                     <div className="space-y-4 flex flex-col overflow-y-auto">
                        <Leaderboard leaderboard={leaderboard} />
                        <ChatBox latestMessage={latestChatMessage} />
@@ -216,14 +234,18 @@ const App: React.FC = () => {
 
                 <div className="md:hidden flex flex-col flex-grow min-h-0">
                     <main className="flex-grow min-h-0 overflow-y-auto">
-                        <div className={activeTab === 'game' ? 'h-full' : 'hidden'}>
+                        <div className={activeTab === 'game' ? 'h-full flex flex-col' : 'hidden'}>
+                            <InfoMarquee />
                             <WordleGame 
                                 latestChatMessage={latestChatMessage} 
+                                latestGiftMessage={latestGiftMessage}
                                 isConnected={isConnected} 
                                 updateLeaderboard={updateLeaderboard}
                                 participants={participantsRef.current}
                                 addParticipant={addParticipant}
                                 showValidationToast={showValidationToast}
+                                onInstantWin={handleInstantWin}
+                                onNewGameStart={handleNewGameStart}
                             />
                         </div>
                          <div className={activeTab === 'stats' ? '' : 'hidden'}>
@@ -271,9 +293,7 @@ const App: React.FC = () => {
                     </nav>
                 </div>
                 
-                <MusicPlayer />
-
-                <div id="validationToast" className={`fixed top-28 right-5 ${validationToast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'} text-white py-3 px-5 rounded-lg shadow-lg z-50 transition-all duration-300 ease-in-out ${validationToast.show ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'}`}>
+                <div id="validationToast" className={`fixed top-28 right-5 ${validationToast.type === 'error' ? 'bg-red-600/80 backdrop-blur-sm' : 'bg-blue-600/80 backdrop-blur-sm'} text-white py-3 px-5 rounded-lg shadow-lg z-50 transition-all duration-300 ease-in-out ${validationToast.show ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full'}`}>
                     <p dangerouslySetInnerHTML={{ __html: validationToast.content }} />
                 </div>
             </div>
