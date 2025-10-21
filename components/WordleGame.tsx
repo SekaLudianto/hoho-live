@@ -347,18 +347,18 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
         <>
             <div className="bg-gray-900/50 p-2 md:p-6 rounded-lg flex flex-col h-full">
                 {isPreparing ? (
-                     <div className="text-center text-xl font-bold mb-1 text-yellow-400 animate-pulse h-[28px] flex items-center justify-center">
+                     <div className="text-center text-lg font-bold mb-1 text-yellow-400 animate-pulse h-[28px] flex items-center justify-center">
                         Bersiap...
                     </div>
                 ) : timeLeft !== null ? (
-                    <div className={`text-center text-xl font-bold mb-1 h-[28px] flex items-center justify-center ${timeLeft <= 30 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                    <div className={`text-center text-lg font-bold mb-1 h-[28px] flex items-center justify-center ${timeLeft <= 30 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                         {formatTime(timeLeft)}
                     </div>
                 ) : (
                     <div className="h-[28px] mb-1"></div> 
                 )}
                 
-                <p className="text-center text-gray-400 text-xs md:text-sm mb-1 min-h-[2.5rem] md:min-h-[1.25rem] flex items-center justify-center">
+                <p className="text-center text-gray-400 text-xs md:text-sm mb-1 min-h-0 md:min-h-[1.25rem] flex items-center justify-center">
                     {isConnected ? (isPreparing ? 'Game baru akan segera dimulai!' : `Kirim gift, follow, atau komen 'KING MU JUARA EPL' untuk ikut menebak!`) : 'Hubungkan ke TikTok LIVE untuk memulai!'}
                 </p>
                 <div className="w-full mx-auto flex-grow overflow-hidden">
@@ -376,7 +376,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, latestGiftMe
                         </div>
                     )}
                 </div>
-                <div className="text-center text-lg font-medium mt-1 min-h-[1.5rem] text-cyan-400">{isPreparing ? 'Kata baru sedang disiapkan...' : gameMessage}</div>
+                <div className="text-center text-base font-medium mt-1 min-h-0 text-cyan-400">{isPreparing ? 'Kata baru sedang disiapkan...' : gameMessage}</div>
             </div>
 
             <Modal isOpen={isModalOpen} onClose={autoRestartGame} title={modalContent.title}>

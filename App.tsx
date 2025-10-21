@@ -12,8 +12,11 @@ import { User, LeaderboardEntry, ChatMessage, GiftMessage } from './types';
 import { GameIcon, LeaderboardIcon, ChatIcon, GiftIcon, StatsIcon } from './components/icons/TabIcons';
 import { SpinnerIcon } from './components/icons/SpinnerIcon';
 import MusicPlayer from './components/MusicPlayer';
+import ViewModeSwitcher from './components/ViewModeSwitcher';
 
 const TARGET_USERNAME = 'ahmadsyams.jpg';
+
+type ViewMode = 'mobile' | 'tablet' | 'desktop';
 
 const App: React.FC = () => {
     const { 
@@ -34,6 +37,7 @@ const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState('game');
     const [isRankOverlayVisible, setIsRankOverlayVisible] = useState(false);
     const [sultanInfo, setSultanInfo] = useState<{ user: User; gift: GiftMessage } | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>('desktop');
     
     const rankOverlayTimeoutRef = useRef<number | null>(null);
     const sultanTimeoutRef = useRef<number | null>(null);
@@ -123,6 +127,12 @@ const App: React.FC = () => {
         { name: 'chat', label: 'Obrolan', icon: <ChatIcon /> },
         { name: 'gift', label: 'Hadiah', icon: <GiftIcon /> },
     ];
+
+    const viewModeClasses: Record<ViewMode, string> = {
+        mobile: 'w-full max-w-sm h-[844px] max-h-[90vh] md:aspect-auto',
+        tablet: 'w-full max-w-2xl h-[1024px] max-h-[90vh] md:aspect-auto',
+        desktop: 'w-full h-full md:max-w-6xl md:h-auto md:max-h-[95vh] md:aspect-[18/16]'
+    };
     
     if (!isConnected) {
         return (
@@ -144,8 +154,9 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="w-full h-screen md:h-auto md:min-h-screen md:flex md:items-center md:justify-center md:p-4">
-            <div className="w-full h-full md:max-w-6xl md:h-auto md:max-h-[95vh] md:aspect-[18/16] mx-auto bg-gray-800 md:rounded-2xl shadow-lg p-2 md:p-6 flex flex-col">
+        <div className="w-full h-screen md:min-h-screen flex items-center justify-center p-2 md:p-4">
+            <ViewModeSwitcher currentMode={viewMode} setMode={setViewMode} />
+            <div className={`mx-auto bg-gray-800 md:rounded-2xl shadow-lg p-2 md:p-6 flex flex-col transition-all duration-300 ease-in-out ${viewModeClasses[viewMode]}`}>
                 
                 <RankOverlay isOpen={isRankOverlayVisible} leaderboard={leaderboard} />
                 <SultanOverlay 

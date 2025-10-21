@@ -14,16 +14,16 @@ const WordleGrid: React.FC<WordleGridProps> = ({ bestGuess, recentGuesses, wordL
     <div key={key} className="guess-row">
         <div className="flex items-center gap-1 mb-0.5">
             <img
-                className="w-6 h-6 rounded-full bg-gray-700 object-cover"
+                className="w-5 h-5 rounded-full bg-gray-700 object-cover"
                 src={guessData.user.profilePictureUrl}
                 alt={guessData.user.nickname}
             />
-            <span className="text-sm text-gray-300 font-medium break-words">
+            <span className="text-xs text-gray-300 font-medium break-words">
                 {guessData.user.nickname}
             </span>
         </div>
         <div
-            className="wordle-grid-row grid gap-1"
+            className="wordle-grid-row grid gap-0.5"
             style={{ gridTemplateColumns: `repeat(${wordLength}, 1fr)` }}
         >
             {Array.from({ length: wordLength }).map((_, j) => {
@@ -42,7 +42,7 @@ const WordleGrid: React.FC<WordleGridProps> = ({ bestGuess, recentGuesses, wordL
             <p className="text-center">Belum ada tebakan.</p>
             <p className="text-center text-sm mb-4">Ayo tebak di kolom komentar!</p>
             <div
-                className="wordle-grid-row grid gap-1 w-full"
+                className="wordle-grid-row grid gap-0.5 w-full"
                 style={{ gridTemplateColumns: `repeat(${wordLength}, 1fr)` }}
             >
                 {Array.from({ length: wordLength * 3 }).map((_, j) => (
@@ -54,7 +54,7 @@ const WordleGrid: React.FC<WordleGridProps> = ({ bestGuess, recentGuesses, wordL
   }
 
   return (
-    <div className="space-y-2 max-w-sm mx-auto">
+    <div className="space-y-1 max-w-sm mx-auto">
         <div>
             <h4 className="text-sm font-bold text-yellow-400 mb-1 text-center uppercase tracking-wider">Tebakan Terbaik</h4>
             {renderGuessRow(bestGuess, 'best-guess')}
@@ -62,7 +62,7 @@ const WordleGrid: React.FC<WordleGridProps> = ({ bestGuess, recentGuesses, wordL
 
         {recentGuesses.length > 0 && (
             <>
-                <div className="relative my-1">
+                <div className="relative my-0.5">
                     <div className="absolute inset-0 flex items-center" aria-hidden="true">
                         <div className="w-full border-t border-gray-600"></div>
                     </div>
@@ -71,7 +71,7 @@ const WordleGrid: React.FC<WordleGridProps> = ({ bestGuess, recentGuesses, wordL
                     </div>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                     {recentGuesses.map((guessData, i) => 
                         renderGuessRow(guessData, `${guessData.user.uniqueId}-${guessData.guess}-${i}`)
                     )}
