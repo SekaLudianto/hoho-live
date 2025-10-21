@@ -9,6 +9,7 @@ interface WordleGameProps {
     latestChatMessage: ChatMessage | null;
     isConnected: boolean;
     updateLeaderboard: (winner: User) => void;
+    followers: Set<string>;
 }
 
 const WORD_LENGTH = 5;
@@ -41,7 +42,7 @@ const calculateStatuses = (guess: string, solution: string): TileStatus[] => {
     return statuses;
 };
 
-const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected, updateLeaderboard }) => {
+const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected, updateLeaderboard, followers }) => {
     const [targetWord, setTargetWord] = useState<string>('');
     
     const [guessHistory, setGuessHistory] = useState<GuessData[]>([]);
@@ -51,6 +52,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
     const [isGameOver, setIsGameOver] = useState(false);
     const [gameMessage, setGameMessage] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
+    const [isPreparing, setIsPreparing] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalContent, setModalContent] = useState<{ title: string; word: string; definitions: string[]; examples: string[], winner?: User }>({ title: '', word: '', definitions: [], examples: [], winner: undefined });
     const [validationToast, setValidationToast] = useState<{ show: boolean, content: string, type: 'info' | 'error' }>({ show: false, content: '', type: 'info' });
@@ -66,6 +68,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
     const isEndingGame = useRef(false);
     const modalTimeoutRef = useRef<number | null>(null);
     const restartTimeoutRef = useRef<number | null>(null);
+    const prepareGameTimeoutRef = useRef<number | null>(null);
 
 
     const showValidationToast = (content: string, type: 'info' | 'error' = 'error') => {
@@ -86,31 +89,38 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
     }, []);
 
     const startNewGame = useCallback(async () => {
+        // Phase 1: Cleanup and set "preparing" state
         setIsLoading(true);
-        setGameMessage('Membuat kata baru...');
         
-        // Cleanup timeouts from previous game
+        // Cleanup all possible timers
         clearTimer();
         if (modalTimeoutRef.current) clearTimeout(modalTimeoutRef.current);
         if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+        if (prepareGameTimeoutRef.current) clearTimeout(prepareGameTimeoutRef.current);
 
         isEndingGame.current = false;
         
         setGuessHistory([]);
-        
         setIsGameOver(false);
         setGameMessage('');
         processedGuesses.current.clear();
-        messageQueueRef.current = []; // Clear queue on new game
+        messageQueueRef.current = [];
+        setTimeLeft(null);
+        setTargetWord(''); // Clear word during preparation
 
-        await wordService.initialize();
-        const newWord = wordService.getRandomWord(WORD_LENGTH);
-        setTargetWord(newWord);
-        console.log(`New Game (Timer Mode): ${newWord}`);
-        
-        setTimeLeft(TIMER_DURATION);
-
+        setIsPreparing(true);
         setIsLoading(false);
+
+        // Phase 2: After a delay, set the word and start the timer
+        prepareGameTimeoutRef.current = window.setTimeout(async () => {
+            await wordService.initialize();
+            const newWord = wordService.getRandomWord(WORD_LENGTH);
+            setTargetWord(newWord);
+            
+            setIsPreparing(false); // End "preparing" state
+            setTimeLeft(TIMER_DURATION); // Start the timer now
+        }, 3000); // 3-second "get ready" period
+
     }, [clearTimer]);
 
     useEffect(() => {
@@ -194,7 +204,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
     }, [timeLeft, isGameOver, targetWord, clearTimer, autoRestartGame]);
 
     const handleGuess = useCallback((message: ChatMessage) => {
-        if (!message.isFollower) {
+        if (!message.isFollower && !followers.has(message.uniqueId)) {
             const toastContent = `<b>${message.nickname}</b>, follow dulu untuk menjawab!`;
             showValidationToast(toastContent, 'info');
             return;
@@ -203,7 +213,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
         const guess = message.comment.trim();
         const user = message;
 
-        if (!isConnected || isGameOver || guess.length !== WORD_LENGTH) {
+        if (!isConnected || isGameOver || isPreparing || guess.length !== WORD_LENGTH || !targetWord) {
             return;
         }
     
@@ -251,7 +261,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
                 restartTimeoutRef.current = window.setTimeout(autoRestartGame, 5000);
             }, 1500);
         }
-    }, [isGameOver, isConnected, targetWord, clearTimer, updateLeaderboard, autoRestartGame]);
+    }, [isGameOver, isConnected, targetWord, clearTimer, updateLeaderboard, autoRestartGame, followers, isPreparing]);
 
     useEffect(() => {
         if (latestChatMessage && latestChatMessage !== lastProcessedMessageRef.current) {
@@ -291,14 +301,20 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
     return (
         <>
             <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg flex flex-col h-full">
-                {timeLeft !== null && (
-                    <div className={`text-center text-2xl font-bold mb-2 ${timeLeft <= 30 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                {isPreparing ? (
+                     <div className="text-center text-2xl font-bold mb-2 text-yellow-400 animate-pulse h-[36px] flex items-center justify-center">
+                        Bersiap...
+                    </div>
+                ) : timeLeft !== null ? (
+                    <div className={`text-center text-2xl font-bold mb-2 h-[36px] flex items-center justify-center ${timeLeft <= 30 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                         {formatTime(timeLeft)}
                     </div>
+                ) : (
+                    <div className="h-[36px] mb-2"></div> 
                 )}
                 
                 <p className="text-center text-gray-400 mb-2 text-sm h-5">
-                    {isConnected ? 'Hanya followers yang bisa menebak!' : 'Hubungkan ke TikTok LIVE untuk memulai!'}
+                    {isConnected ? (isPreparing ? 'Game baru akan segera dimulai!' : 'Hanya followers yang bisa menebak!') : 'Hubungkan ke TikTok LIVE untuk memulai!'}
                 </p>
                 <div className="w-full mx-auto flex-grow overflow-hidden">
                     {isLoading ? (
@@ -315,7 +331,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
                         </div>
                     )}
                 </div>
-                <div className="text-center text-lg font-medium mt-2 h-6 text-cyan-400">{gameMessage}</div>
+                <div className="text-center text-lg font-medium mt-2 h-6 text-cyan-400">{isPreparing ? 'Kata baru sedang disiapkan...' : gameMessage}</div>
             </div>
 
             <Modal isOpen={isModalOpen} onClose={autoRestartGame} title={modalContent.title}>

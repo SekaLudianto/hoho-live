@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { ChatMessage, ConnectionState, GiftMessage, LikeMessage, RoomUserMessage, SocialMessage } from '../types';
 
-const BACKEND_URL = "https://glorious-adventure-production.up.railway.app/";
+const BACKEND_URL = "https://glorious-adventure-production.up.railway.app";
 
 export const useTikTok = () => {
   const socket = useRef<Socket | null>(null);
@@ -16,6 +16,7 @@ export const useTikTok = () => {
   const [latestLikeMessage, setLatestLikeMessage] = useState<LikeMessage | null>(null);
   const [latestSocialMessage, setLatestSocialMessage] = useState<SocialMessage | null>(null);
   const [roomUsers, setRoomUsers] = useState<RoomUserMessage | null>(null);
+  const [followers, setFollowers] = useState<Set<string>>(new Set());
   const [totalDiamonds, setTotalDiamonds] = useState<number>(0);
   
   const lastUniqueIdRef = useRef<string>('');
@@ -61,6 +62,7 @@ export const useTikTok = () => {
       setErrorMessage(null);
       setIsConnecting(false);
       setTotalDiamonds(0);
+      setFollowers(new Set());
     });
 
     socket.current.on('tiktokDisconnected', (reason: string) => {
@@ -107,6 +109,9 @@ export const useTikTok = () => {
     socket.current.on('like', (msg: LikeMessage) => setLatestLikeMessage(msg));
     socket.current.on('social', (msg: SocialMessage) => {
       setLatestSocialMessage(msg);
+      if (msg.displayType.includes('follow')) {
+        setFollowers(prev => new Set(prev).add(msg.uniqueId));
+      }
     });
     socket.current.on('roomUser', (msg: RoomUserMessage) => setRoomUsers(msg));
 
@@ -137,6 +142,7 @@ export const useTikTok = () => {
     latestLikeMessage,
     latestSocialMessage,
     roomUsers,
+    followers,
     totalDiamonds,
   };
 };
