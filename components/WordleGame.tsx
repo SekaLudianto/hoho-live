@@ -9,7 +9,6 @@ interface WordleGameProps {
     latestChatMessage: ChatMessage | null;
     isConnected: boolean;
     updateLeaderboard: (winner: User) => void;
-    followers: Set<string>;
 }
 
 const WORD_LENGTH = 5;
@@ -42,7 +41,7 @@ const calculateStatuses = (guess: string, solution: string): TileStatus[] => {
     return statuses;
 };
 
-const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected, updateLeaderboard, followers }) => {
+const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected, updateLeaderboard }) => {
     const [targetWord, setTargetWord] = useState<string>('');
     
     const [guessHistory, setGuessHistory] = useState<GuessData[]>([]);
@@ -194,12 +193,15 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
         return () => clearTimer();
     }, [timeLeft, isGameOver, targetWord, clearTimer, autoRestartGame]);
 
-    const handleGuess = useCallback((guess: string, user: User) => {
-        if (!followers.has(user.uniqueId)) {
-            const toastContent = `<b>${user.nickname}</b>, follow dulu untuk menjawab!`;
+    const handleGuess = useCallback((message: ChatMessage) => {
+        if (!message.isFollower) {
+            const toastContent = `<b>${message.nickname}</b>, follow dulu untuk menjawab!`;
             showValidationToast(toastContent, 'info');
             return;
         }
+        
+        const guess = message.comment.trim();
+        const user = message;
 
         if (!isConnected || isGameOver || guess.length !== WORD_LENGTH) {
             return;
@@ -249,7 +251,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
                 restartTimeoutRef.current = window.setTimeout(autoRestartGame, 5000);
             }, 1500);
         }
-    }, [isGameOver, isConnected, targetWord, clearTimer, updateLeaderboard, autoRestartGame, followers]);
+    }, [isGameOver, isConnected, targetWord, clearTimer, updateLeaderboard, autoRestartGame]);
 
     useEffect(() => {
         if (latestChatMessage && latestChatMessage !== lastProcessedMessageRef.current) {
@@ -270,7 +272,7 @@ const WordleGame: React.FC<WordleGameProps> = ({ latestChatMessage, isConnected,
             if (messageToProcess) {
                 const potentialGuess = messageToProcess.comment.trim();
                 if (potentialGuess.length === WORD_LENGTH && /^[a-zA-Z]+$/.test(potentialGuess)) {
-                    handleGuess(potentialGuess, messageToProcess);
+                    handleGuess(messageToProcess);
                 }
             }
 

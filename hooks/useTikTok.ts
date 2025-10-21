@@ -17,7 +17,6 @@ export const useTikTok = () => {
   const [latestSocialMessage, setLatestSocialMessage] = useState<SocialMessage | null>(null);
   const [roomUsers, setRoomUsers] = useState<RoomUserMessage | null>(null);
   const [totalDiamonds, setTotalDiamonds] = useState<number>(0);
-  const [followers, setFollowers] = useState<Set<string>>(new Set());
   
   const lastUniqueIdRef = useRef<string>('');
   const reconnectIntervalRef = useRef<number | null>(null);
@@ -62,7 +61,6 @@ export const useTikTok = () => {
       setErrorMessage(null);
       setIsConnecting(false);
       setTotalDiamonds(0);
-      setFollowers(new Set()); // Reset followers on new connection
     });
 
     socket.current.on('tiktokDisconnected', (reason: string) => {
@@ -108,9 +106,6 @@ export const useTikTok = () => {
     });
     socket.current.on('like', (msg: LikeMessage) => setLatestLikeMessage(msg));
     socket.current.on('social', (msg: SocialMessage) => {
-      if (msg.displayType.includes('follow')) {
-        setFollowers(prev => new Set(prev).add(msg.uniqueId));
-      }
       setLatestSocialMessage(msg);
     });
     socket.current.on('roomUser', (msg: RoomUserMessage) => setRoomUsers(msg));
@@ -143,6 +138,5 @@ export const useTikTok = () => {
     latestSocialMessage,
     roomUsers,
     totalDiamonds,
-    followers
   };
 };

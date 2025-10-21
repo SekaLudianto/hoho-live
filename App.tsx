@@ -25,8 +25,7 @@ const App: React.FC = () => {
         latestGiftMessage,
         latestLikeMessage,
         roomUsers,
-        totalDiamonds,
-        followers
+        totalDiamonds
     } = useTikTok();
     
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -146,7 +145,6 @@ const App: React.FC = () => {
                         latestChatMessage={latestChatMessage} 
                         isConnected={isConnected} 
                         updateLeaderboard={updateLeaderboard}
-                        followers={followers}
                     />
                     <div className="space-y-4 flex flex-col overflow-y-auto">
                        <Leaderboard leaderboard={leaderboard} />
@@ -164,7 +162,6 @@ const App: React.FC = () => {
                                 latestChatMessage={latestChatMessage} 
                                 isConnected={isConnected} 
                                 updateLeaderboard={updateLeaderboard}
-                                followers={followers}
                             />
                         </div>
                          <div className={activeTab === 'stats' ? '' : 'hidden'}>
