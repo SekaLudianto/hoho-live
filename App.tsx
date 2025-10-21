@@ -13,7 +13,7 @@ import { GameIcon, LeaderboardIcon, ChatIcon, GiftIcon, StatsIcon } from './comp
 import { SpinnerIcon } from './components/icons/SpinnerIcon';
 import MusicPlayer from './components/MusicPlayer';
 
-const TARGET_USERNAME = 'ahmadsyams.jpg';
+const TARGET_USERNAME = 'achmadsyams';
 
 const App: React.FC = () => {
     const { 
