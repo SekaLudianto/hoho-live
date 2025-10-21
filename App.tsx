@@ -14,7 +14,7 @@ import { SpinnerIcon } from './components/icons/SpinnerIcon';
 import MusicPlayer from './components/MusicPlayer';
 import ViewModeSwitcher from './components/ViewModeSwitcher';
 
-const TARGET_USERNAME = 'ahmadsyams.jpg';
+const TARGET_USERNAME = 'achmadsyams';
 
 type ViewMode = 'mobile' | 'tablet' | 'desktop';
 
