@@ -54,26 +54,32 @@ export const useTikTok = () => {
         clearReconnectInterval();
     });
 
-    socket.current.on('tiktokConnected', (state: ConnectionState) => {
-      console.log('TikTok Connected:', state);
-      clearReconnectInterval();
-      setConnectionState(state);
-      setIsConnected(true);
-      setErrorMessage(null);
-      setIsConnecting(false);
-      setTotalDiamonds(0);
-      setFollowers(new Set());
+    socket.current.on('tiktokConnected', (state: any) => {
+      if (state && typeof state === 'object' && state.roomId) {
+          console.log('TikTok Connected:', state);
+          clearReconnectInterval();
+          setConnectionState(state as ConnectionState);
+          setIsConnected(true);
+          setErrorMessage(null);
+          setIsConnecting(false);
+          setTotalDiamonds(0);
+          setFollowers(new Set());
+      } else {
+           console.error('Received invalid tiktokConnected event data:', state);
+      }
     });
 
-    socket.current.on('tiktokDisconnected', (reason: string) => {
+    socket.current.on('tiktokDisconnected', (reason: any) => {
       console.warn('TikTok Disconnected:', reason);
       setIsConnected(false);
       setConnectionState(null);
       
       clearReconnectInterval();
+      
+      const reasonString = typeof reason === 'string' ? reason : 'Stream ended or connection lost.';
 
       // Do not try to reconnect if the stream has permanently ended.
-      if (reason?.toLowerCase().includes('stream ended')) {
+      if (typeof reason === 'string' && reason.toLowerCase().includes('stream ended')) {
           setErrorMessage(reason);
           setIsConnecting(false);
           lastUniqueIdRef.current = ''; // Prevent retries
@@ -81,7 +87,7 @@ export const useTikTok = () => {
       }
 
       if (lastUniqueIdRef.current) {
-          const retryMessage = `${reason}. Mencoba lagi...`;
+          const retryMessage = `${reasonString}. Mencoba lagi...`;
           setErrorMessage(retryMessage);
           setIsConnecting(true); // Keep UI in connecting state
 
@@ -92,28 +98,61 @@ export const useTikTok = () => {
               }
           }, 5000); // Retry every 5 seconds
       } else {
-          setErrorMessage(reason);
+          setErrorMessage(reasonString);
           setIsConnecting(false);
       }
     });
 
-    socket.current.on('chat', (msg: ChatMessage) => setLatestChatMessage(msg));
-    socket.current.on('gift', (msg: GiftMessage) => {
-        if (msg.giftType === 1 && !msg.repeatEnd) {
-            // Streak gift, wait for it to end
+    socket.current.on('chat', (msg: any) => {
+        if (msg && typeof msg === 'object' && msg.uniqueId && typeof msg.comment === 'string') {
+            setLatestChatMessage(msg as ChatMessage);
         } else {
-            setTotalDiamonds(prev => prev + msg.diamondCount * msg.repeatCount);
+            console.warn('Received invalid chat message:', msg);
         }
-        setLatestGiftMessage(msg);
     });
-    socket.current.on('like', (msg: LikeMessage) => setLatestLikeMessage(msg));
-    socket.current.on('social', (msg: SocialMessage) => {
-      setLatestSocialMessage(msg);
-      if (msg.displayType.includes('follow')) {
-        setFollowers(prev => new Set(prev).add(msg.uniqueId));
-      }
+
+    socket.current.on('gift', (msg: any) => {
+        if (msg && typeof msg === 'object' && typeof msg.giftId !== 'undefined') {
+            if (msg.giftType === 1 && !msg.repeatEnd) {
+                // Streak gift, wait for it to end
+            } else {
+                const diamonds = (msg.diamondCount || 0) * (msg.repeatCount || 1);
+                if (diamonds > 0) {
+                    setTotalDiamonds(prev => prev + diamonds);
+                }
+            }
+            setLatestGiftMessage(msg as GiftMessage);
+        } else {
+            console.warn('Received invalid gift message:', msg);
+        }
     });
-    socket.current.on('roomUser', (msg: RoomUserMessage) => setRoomUsers(msg));
+
+    socket.current.on('like', (msg: any) => {
+        if (msg && typeof msg === 'object' && typeof msg.totalLikeCount !== 'undefined') {
+            setLatestLikeMessage(msg as LikeMessage);
+        } else {
+            console.warn('Received invalid like message:', msg);
+        }
+    });
+
+    socket.current.on('social', (msg: any) => {
+        if (msg && typeof msg === 'object' && typeof msg.displayType === 'string') {
+            setLatestSocialMessage(msg as SocialMessage);
+            if (msg.displayType.includes('follow') && msg.uniqueId) {
+                setFollowers(prev => new Set(prev).add(msg.uniqueId));
+            }
+        } else {
+            console.warn('Received invalid social message:', msg);
+        }
+    });
+    
+    socket.current.on('roomUser', (msg: any) => {
+        if (msg && typeof msg === 'object' && typeof msg.viewerCount !== 'undefined') {
+            setRoomUsers(msg as RoomUserMessage);
+        } else {
+            console.warn('Received invalid roomUser message:', msg);
+        }
+    });
 
     return () => {
       clearReconnectInterval();

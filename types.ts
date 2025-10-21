@@ -6,6 +6,7 @@ export interface User {
 
 export interface ChatMessage extends User {
   comment: string;
+  isFollower: boolean;
 }
 
 export interface GiftMessage extends User {

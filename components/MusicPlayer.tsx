@@ -68,7 +68,7 @@ const MusicPlayer: React.FC = () => {
     if (event.data === window.YT.PlayerState.PLAYING) {
       setIsPlaying(true);
       const trackData = event.target.getVideoData();
-      setCurrentTrackTitle(trackData.title || 'Memuat...');
+      setCurrentTrackTitle(trackData?.title || 'Memuat...');
     } else {
       setIsPlaying(false);
     }

@@ -7,12 +7,13 @@ import ChatBox from './components/ChatBox';
 import GiftBox from './components/GiftBox';
 import Leaderboard from './components/Leaderboard';
 import RankOverlay from './components/RankOverlay';
-import { User, LeaderboardEntry, ChatMessage } from './types';
+import SultanOverlay from './components/SultanOverlay';
+import { User, LeaderboardEntry, ChatMessage, GiftMessage } from './types';
 import { GameIcon, LeaderboardIcon, ChatIcon, GiftIcon, StatsIcon } from './components/icons/TabIcons';
 import { SpinnerIcon } from './components/icons/SpinnerIcon';
 import MusicPlayer from './components/MusicPlayer';
 
-const TARGET_USERNAME = 'achmadsyams';
+const TARGET_USERNAME = 'ahmadsyams.jpg';
 
 const App: React.FC = () => {
     const { 
@@ -24,15 +25,18 @@ const App: React.FC = () => {
         latestChatMessage,
         latestGiftMessage,
         latestLikeMessage,
+        latestSocialMessage,
         roomUsers,
         totalDiamonds,
-        followers
     } = useTikTok();
     
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [activeTab, setActiveTab] = useState('game');
     const [isRankOverlayVisible, setIsRankOverlayVisible] = useState(false);
+    const [sultanInfo, setSultanInfo] = useState<{ user: User; gift: GiftMessage } | null>(null);
+    
     const rankOverlayTimeoutRef = useRef<number | null>(null);
+    const sultanTimeoutRef = useRef<number | null>(null);
     const lastProcessedRankCommandRef = useRef<ChatMessage | null>(null);
 
     useEffect(() => {
@@ -59,11 +63,31 @@ const App: React.FC = () => {
         }
     }, [latestChatMessage]);
     
+     useEffect(() => {
+        if (latestGiftMessage) {
+            // Hapus timeout sebelumnya jika ada gift baru masuk dengan cepat
+            if (sultanTimeoutRef.current) {
+                clearTimeout(sultanTimeoutRef.current);
+            }
+
+            // Tampilkan sultan baru
+            setSultanInfo({ user: latestGiftMessage, gift: latestGiftMessage });
+
+            // Atur timeout untuk menyembunyikan overlay setelah 7 detik
+            sultanTimeoutRef.current = window.setTimeout(() => {
+                setSultanInfo(null);
+            }, 7000);
+        }
+    }, [latestGiftMessage]);
+
     useEffect(() => {
         // Cleanup timeout on component unmount
         return () => {
             if (rankOverlayTimeoutRef.current) {
                 clearTimeout(rankOverlayTimeoutRef.current);
+            }
+            if (sultanTimeoutRef.current) {
+                clearTimeout(sultanTimeoutRef.current);
             }
         };
     }, []);
@@ -121,9 +145,14 @@ const App: React.FC = () => {
 
     return (
         <div className="w-full h-screen md:h-auto md:min-h-screen md:flex md:items-center md:justify-center md:p-4">
-            <div className="w-full h-full md:max-w-6xl md:h-auto md:max-h-[95vh] md:aspect-[18/16] mx-auto bg-gray-800 md:rounded-2xl shadow-lg p-4 md:p-6 flex flex-col">
+            <div className="w-full h-full md:max-w-6xl md:h-auto md:max-h-[95vh] md:aspect-[18/16] mx-auto bg-gray-800 md:rounded-2xl shadow-lg p-2 md:p-6 flex flex-col">
                 
                 <RankOverlay isOpen={isRankOverlayVisible} leaderboard={leaderboard} />
+                <SultanOverlay 
+                    isOpen={!!sultanInfo} 
+                    user={sultanInfo?.user || null} 
+                    gift={sultanInfo?.gift || null} 
+                />
                 
                 {/* Common Header Section */}
                 <div className="flex-shrink-0 space-y-4">
@@ -143,10 +172,11 @@ const App: React.FC = () => {
                 {/* Desktop Layout */}
                 <div className="hidden md:grid grid-cols-[2fr_3fr] gap-6 mt-6 flex-grow min-h-0">
                     <WordleGame 
-                        latestChatMessage={latestChatMessage} 
+                        latestChatMessage={latestChatMessage}
+                        latestGiftMessage={latestGiftMessage}
+                        latestSocialMessage={latestSocialMessage}
                         isConnected={isConnected} 
                         updateLeaderboard={updateLeaderboard}
-                        followers={followers}
                     />
                     <div className="space-y-4 flex flex-col overflow-y-auto">
                        <Leaderboard leaderboard={leaderboard} />
@@ -156,15 +186,16 @@ const App: React.FC = () => {
                 </div>
 
                 {/* Mobile Layout */}
-                <div className="md:hidden flex flex-col flex-grow min-h-0 mt-2">
+                <div className="md:hidden flex flex-col flex-grow min-h-0">
                     {/* Tab Content */}
                     <main className="flex-grow min-h-0 overflow-y-auto">
                         <div className={activeTab === 'game' ? 'h-full' : 'hidden'}>
                             <WordleGame 
                                 latestChatMessage={latestChatMessage} 
+                                latestGiftMessage={latestGiftMessage}
+                                latestSocialMessage={latestSocialMessage}
                                 isConnected={isConnected} 
                                 updateLeaderboard={updateLeaderboard}
-                                followers={followers}
                             />
                         </div>
                          <div className={activeTab === 'stats' ? '' : 'hidden'}>
@@ -191,7 +222,7 @@ const App: React.FC = () => {
                     </main>
                     
                     {/* Tab Navigation */}
-                    <nav className="flex-shrink-0 border-t border-gray-700 bg-gray-800 -mx-4 -mb-4 px-2 pt-2 pb-1">
+                    <nav className="flex-shrink-0 border-t border-gray-700 bg-gray-800 -mx-2 -mb-2 px-2 pt-2 pb-1">
                         <div className="flex justify-around" aria-label="Tabs">
                             {tabs.map((tab) => (
                                 <button
