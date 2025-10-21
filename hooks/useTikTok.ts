@@ -21,7 +21,6 @@ export const useTikTok = () => {
   
   const lastUniqueIdRef = useRef<string>('');
   const reconnectIntervalRef = useRef<number | null>(null);
-  const lastGiftIdRef = useRef<string | null>(null);
 
   const clearReconnectInterval = useCallback(() => {
     if (reconnectIntervalRef.current) {
@@ -114,19 +113,18 @@ export const useTikTok = () => {
 
     socket.current.on('gift', (msg: any) => {
         if (msg && typeof msg === 'object' && typeof msg.giftId !== 'undefined') {
-            const uniqueGiftId = `${msg.userId}_${msg.giftId}_${new Date().getTime()}`; // Create a more unique ID for each event instance
-            if(lastGiftIdRef.current === uniqueGiftId) return;
-            lastGiftIdRef.current = uniqueGiftId;
-
             if (msg.giftType === 1 && !msg.repeatEnd) {
-                // Streak gift, wait for it to end
+                // Streak gift, wait for it to end. We still update the state for UI feedback.
             } else {
+                // To prevent double counting on re-renders, this part should ideally be handled
+                // by consumers with proper state management, as the socket event can fire multiple times.
+                // For now, the consumer (App.tsx) handles its own logic.
                 const diamonds = (msg.diamondCount || 0) * (msg.repeatCount || 1);
                 if (diamonds > 0) {
                     setTotalDiamonds(prev => prev + diamonds);
                 }
             }
-            setLatestGiftMessage({...msg, uniqueGiftId } as GiftMessage);
+            setLatestGiftMessage(msg as GiftMessage);
         } else {
             console.warn('Received invalid gift message:', msg);
         }

@@ -105,7 +105,7 @@ const App: React.FC = () => {
     }, [latestChatMessage]);
     
     useEffect(() => {
-        if (latestGiftMessage && latestGiftMessage.giftId !== lastProcessedGiftRef.current?.giftId) {
+        if (latestGiftMessage && latestGiftMessage !== lastProcessedGiftRef.current) {
             addParticipant(latestGiftMessage, 'gift');
             lastProcessedGiftRef.current = latestGiftMessage;
 

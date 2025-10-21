@@ -21,6 +21,10 @@ const WORD_LENGTH = 5;
 const TIMER_DURATION = 900; // 15 menit dalam detik
 
 const calculateStatuses = (guess: string, solution: string): TileStatus[] => {
+    if (guess === solution) {
+        return Array(solution.length).fill('correct');
+    }
+
     const guessChars = guess.split('');
     const solutionChars = solution.split('');
     const statuses: TileStatus[] = Array(solution.length).fill('absent');
@@ -78,7 +82,7 @@ const WordleGame: React.FC<WordleGameProps> = ({
     const timerIntervalRef = useRef<number | null>(null);
     const gridContainerRef = useRef<HTMLDivElement>(null);
     const lastProcessedMessageRef = useRef<ChatMessage | null>(null);
-    const lastProcessedGiftIdRef = useRef<number | null>(null);
+    const lastProcessedGiftRef = useRef<GiftMessage | null>(null);
     const isEndingGame = useRef(false);
     const modalTimeoutRef = useRef<number | null>(null);
     const restartTimeoutRef = useRef<number | null>(null);
@@ -126,6 +130,28 @@ const WordleGame: React.FC<WordleGameProps> = ({
         }, 1500);
 
     }, [targetWord, clearTimer, updateLeaderboard, autoRestartGame]);
+
+    const handleForceReveal = useCallback(() => {
+        if (isGameOver || isEndingGame.current || !targetWord) return;
+        isEndingGame.current = true;
+
+        clearTimer();
+        setGameMessage(`Kata dibuka! Jawaban: ${targetWord}`);
+        setIsGameOver(true);
+        
+        modalTimeoutRef.current = window.setTimeout(() => {
+            const def = wordService.getWordDefinition(targetWord);
+            setModalContent({
+                title: 'Kata Telah Dibuka',
+                word: targetWord,
+                definitions: def?.submakna || ['Definisi tidak ditemukan.'],
+                examples: def?.contoh || [],
+                winner: undefined,
+            });
+            setIsModalOpen(true);
+            restartTimeoutRef.current = window.setTimeout(autoRestartGame, 5000);
+        }, 1500);
+    }, [isGameOver, targetWord, clearTimer, autoRestartGame]);
 
     const startNewGame = useCallback(async () => {
         // Phase 1: Cleanup and set "preparing" state
@@ -278,10 +304,10 @@ const WordleGame: React.FC<WordleGameProps> = ({
     }, [latestChatMessage]);
     
     useEffect(() => {
-        if (latestGiftMessage && latestGiftMessage.giftId !== lastProcessedGiftIdRef.current) {
+        if (latestGiftMessage && latestGiftMessage !== lastProcessedGiftRef.current) {
              if (isGameOver || isEndingGame.current || isPreparing) return;
 
-            lastProcessedGiftIdRef.current = latestGiftMessage.giftId;
+            lastProcessedGiftRef.current = latestGiftMessage;
             const gift = latestGiftMessage;
             const diamondValue = gift.diamondCount * gift.repeatCount;
 
@@ -368,7 +394,20 @@ const WordleGame: React.FC<WordleGameProps> = ({
                         </div>
                     )}
                 </div>
-                <div className="text-center text-sm md:text-base font-medium mt-1 text-cyan-400">{isPreparing ? 'Kata baru sedang disiapkan...' : gameMessage}</div>
+                <div className="flex flex-col items-center justify-center mt-1">
+                    <div className="text-center text-sm md:text-base font-medium text-cyan-400 h-6">
+                        {isPreparing ? 'Kata baru sedang disiapkan...' : gameMessage}
+                    </div>
+                    {!isGameOver && !isPreparing && isConnected && (
+                        <button 
+                            onClick={handleForceReveal}
+                            className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500"
+                            aria-label="Paksa buka kata dan mulai game baru"
+                        >
+                            Buka Kata
+                        </button>
+                    )}
+                </div>
             </div>
 
             <Modal isOpen={isModalOpen} onClose={autoRestartGame} title={modalContent.title}>
