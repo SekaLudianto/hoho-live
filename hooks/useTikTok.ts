@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { ChatMessage, ConnectionState, GiftMessage, LikeMessage, RoomUserMessage, SocialMessage } from '../types';
 
-const BACKEND_URL = "https://wordle-back-new.onrender.com";
+const BACKEND_URL = "https://ee24e7ae0c83.ngrok-free.app";
 
 export const useTikTok = () => {
   const socket = useRef<Socket | null>(null);
