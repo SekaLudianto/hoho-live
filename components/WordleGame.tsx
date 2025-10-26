@@ -260,7 +260,7 @@ const WordleGame: React.FC<WordleGameProps> = ({
 
     const handleGuess = useCallback((message: ChatMessage) => {
         if (!participants.has(message.uniqueId)) {
-            const toastContent = `<b>${message.nickname}</b>, kirim gift, follow, atau komen 'GGMU' dulu untuk ikut menebak!`;
+            const toastContent = `<b>${message.nickname}</b>, kirim gift, follow, atau komen FREE PALESTINE dulu untuk ikut menebak!`;
             showValidationToast(toastContent, 'info');
             return;
         }
@@ -340,7 +340,7 @@ const WordleGame: React.FC<WordleGameProps> = ({
                 const user = messageToProcess;
 
                 // Check for participation phrase
-                if (comment === 'GGMU') {
+                if (comment === 'FREE PALESTINE') {
                     addParticipant(user, 'comment');
                 } 
                 // Check for a valid guess
@@ -377,7 +377,7 @@ const WordleGame: React.FC<WordleGameProps> = ({
                 )}
                 
                 <p className="text-center text-gray-400 text-xs md:text-sm mb-1 flex items-center justify-center">
-                    {isConnected ? (isPreparing ? 'Game baru akan segera dimulai!' : `Kirim gift, follow, atau komen 'GGMU' untuk ikut menebak!`) : 'Hubungkan ke TikTok LIVE untuk memulai!'}
+                    {isConnected ? (isPreparing ? 'Game baru akan segera dimulai!' : `Kirim gift, follow, atau komen FREE PALESTINE untuk ikut menebak!`) : 'Hubungkan ke TikTok LIVE untuk memulai!'}
                 </p>
                 <div className="w-full mx-auto flex-grow overflow-hidden">
                     {isLoading ? (
