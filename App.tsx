@@ -14,7 +14,7 @@ import { User, LeaderboardEntry, ChatMessage, GiftMessage, SocialMessage } from 
 import { GameIcon, LeaderboardIcon, ChatIcon, GiftIcon, StatsIcon } from './components/icons/TabIcons';
 import { SpinnerIcon } from './components/icons/SpinnerIcon';
 
-const TARGET_USERNAME = 'achmadsyams';
+const TARGET_USERNAME = 'kambing.gimang';
 
 const App: React.FC = () => {
     const { 
@@ -74,7 +74,7 @@ const App: React.FC = () => {
             } else if (reason === 'gift') {
                 toastContent = `<b>${user.nickname}</b>, makasih giftnya! Kamu sekarang bisa menebak.`;
             } else if (reason === 'comment') {
-                toastContent = `Selamat <b>${user.nickname}</b> kamu resmi jadi fans MU, silahkan menebak!`;
+                toastContent = `Terimakasih <b>${user.nickname}</b> sudah mendukung palestina, silahkan menebak!`;
             }
             showValidationToast(toastContent, 'info');
         }
