@@ -17,9 +17,9 @@ const InfoMarquee: React.FC = () => {
                 `}
             </style>
             <div className="marquee-text text-sm text-yellow-300">
-                <span className="mx-4">🎁 <b>10 Koin</b> = Buka Kata & Menang!</span>
+                <span className="mx-4"></span>
                 <span className="mx-4">|</span>
-                <span className="mx-4">🎁 <b>30+ Koin</b> = Langsung Menang & Jadi Sorotan!</span>
+                <span className="mx-4"></span>
             </div>
         </div>
     );
