@@ -18,7 +18,7 @@ const InfoMarquee: React.FC = () => {
             </style>
             <div className="marquee-text text-sm text-yellow-300">
                 <span className="mx-4"></span>
-                <span className="mx-4">|</span>
+                <span className="mx-4">Jangan lupa follow guys!</span>
                 <span className="mx-4"></span>
             </div>
         </div>
