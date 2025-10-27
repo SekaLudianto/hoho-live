@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { ChatMessage, ConnectionState, GiftMessage, LikeMessage, RoomUserMessage, SocialMessage } from '../types';
 
-const BACKEND_URL = "https://4185f9db92e7.ngrok-free.app";
+const BACKEND_URL = "https://tiktok-server-production.up.railway.app";
 
 export const useTikTok = () => {
   const socket = useRef<Socket | null>(null);
