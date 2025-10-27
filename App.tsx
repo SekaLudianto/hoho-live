@@ -14,7 +14,7 @@ import { User, LeaderboardEntry, ChatMessage, GiftMessage, SocialMessage } from 
 import { GameIcon, LeaderboardIcon, ChatIcon, GiftIcon, StatsIcon } from './components/icons/TabIcons';
 import { SpinnerIcon } from './components/icons/SpinnerIcon';
 
-const TARGET_USERNAME = 'goldaaac';
+const TARGET_USERNAME = 'upen.riyadhi';
 
 const App: React.FC = () => {
     const { 
